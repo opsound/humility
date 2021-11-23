@@ -7,6 +7,7 @@ use crate::core::Core;
 use crate::hiffy::*;
 use crate::hubris::*;
 use crate::Args;
+use crate::spi::spi_task;
 use std::convert::TryInto;
 use std::str;
 use std::thread;
@@ -82,53 +83,7 @@ fn spi(
     let spi_read = funcs.get("SpiRead", 3)?;
     let spi_write = funcs.get("SpiWrite", 2)?;
 
-    let lookup = |peripheral| {
-        let spi = format!("spi{}", peripheral);
-        let tasks = hubris.lookup_feature(&spi)?;
-
-        match tasks.len() {
-            0 => Ok(None),
-            1 => Ok(Some(tasks[0])),
-            _ => {
-                bail!("more than one task has {}", spi);
-            }
-        }
-    };
-
-    let task = if let Some(peripheral) = subargs.peripheral {
-        match lookup(peripheral)? {
-            Some(task) => task,
-            None => {
-                bail!("SPI peripheral {} not found", peripheral);
-            }
-        }
-    } else {
-        let mut found = vec![];
-
-        for peripheral in 0..9 {
-            if let Some(task) = lookup(peripheral)? {
-                found.push((peripheral, task));
-            }
-        }
-
-        if found.is_empty() {
-            bail!("no SPI peripherals found")
-        }
-
-        if found.len() > 1 {
-            bail!(
-                "SPI peripheral must be specified; valid peripherals: {}",
-                found
-                    .iter()
-                    .map(|v| v.0.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            );
-        }
-
-        found[0].1
-    };
-
+    let task = spi_task(hubris, subargs.peripheral)?;
     let mut ops = vec![];
 
     if let HubrisTask::Task(task) = task {

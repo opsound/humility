@@ -24,6 +24,7 @@ mod hiffy;
 mod i2c;
 mod itm;
 mod scs;
+mod spi;
 mod swo;
 mod test;
 mod tpiu;
