@@ -8,7 +8,7 @@ use anyhow::{bail, Result};
 /// hint to disambiguate).
 pub fn spi_task(
     hubris: &HubrisArchive,
-    peripheral: Option<u8>
+    peripheral: Option<u8>,
 ) -> Result<HubrisTask> {
     let lookup = |peripheral| {
         let spi = format!("spi{}", peripheral);
