@@ -28,6 +28,7 @@ mod stmsecure;
 mod tasks;
 mod test;
 mod trace;
+mod vsc7448;
 
 use crate::core::Core;
 use crate::hubris::*;
@@ -115,6 +116,7 @@ pub fn init<'a, 'b>(
         test::init,
         trace::init,
         stmsecure::init,
+        vsc7448::init,
     ];
 
     for dcmd in &dcmds {
