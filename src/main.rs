@@ -186,25 +186,9 @@ fn main() {
         HumilityLog { level: log::LevelFilter::Info }.enable();
     }
 
-    let mut hubris = HubrisArchive::new()
-        .map_err(|err| {
-            fatal!("failed to initialize: {}", err);
-        })
-        .unwrap();
-
-    if let Some(archive) = &args.archive {
-        if let Err(err) = hubris.load(archive) {
-            fatal!("failed to load archive: {:#}", err);
-        }
-    } else if let Some(dump) = &args.dump {
-        if let Err(err) = hubris.load_dump(dump) {
-            fatal!("failed to load dump: {:#}", err);
-        }
-    }
-
     match &args.cmd {
         Subcommand::Other(ref subargs) => {
-            match cmd::subcommand(&commands, &mut hubris, &args, subargs) {
+            match cmd::subcommand(&commands, &args, subargs) {
                 Err(err) => fatal!("{} failed: {:?}", subargs[0], err),
                 _ => std::process::exit(0),
             }

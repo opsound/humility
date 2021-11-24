@@ -34,17 +34,18 @@ use crate::core::Core;
 use crate::hubris::*;
 use crate::Args;
 use crate::{attach_dump, attach_live};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use structopt::clap::App;
 
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Archive {
     Required,
     Optional,
     Prohibited,
+    Ignored,
 }
 
 #[allow(dead_code)]
@@ -136,7 +137,6 @@ pub fn init<'a, 'b>(
 
 pub fn subcommand(
     commands: &HashMap<&'static str, Command>,
-    hubris: &mut HubrisArchive,
     args: &Args,
     subargs: &Vec<String>,
 ) -> Result<()> {
@@ -145,6 +145,17 @@ pub fn subcommand(
             Command::Attached { archive, .. } => archive,
             Command::Unattached { archive, .. } => archive,
         };
+
+        let mut hubris =
+            HubrisArchive::new().context("failed to initialize")?;
+
+        if *archive != Archive::Ignored {
+            if let Some(archive) = &args.archive {
+                hubris.load(archive).context("failed to load archive")?;
+            } else if let Some(dump) = &args.dump {
+                hubris.load_dump(dump).context("failed to load dump")?;
+            }
+        }
 
         match (archive, hubris.loaded()) {
             (Archive::Required, false) => {
@@ -162,10 +173,10 @@ pub fn subcommand(
             Command::Attached { run, attach, validate, .. } => {
                 let mut c = match attach {
                     Attach::LiveOnly => attach_live(args),
-                    Attach::DumpOnly => attach_dump(args, hubris),
+                    Attach::DumpOnly => attach_dump(args, &hubris),
                     Attach::Any => {
                         if args.dump.is_some() {
-                            attach_dump(args, hubris)
+                            attach_dump(args, &hubris)
                         } else {
                             attach_live(args)
                         }
@@ -184,9 +195,11 @@ pub fn subcommand(
                     Validate::None => {}
                 }
 
-                (run)(hubris, core, args, subargs)
+                (run)(&mut hubris, core, args, subargs)
             }
-            Command::Unattached { run, .. } => (run)(hubris, args, subargs),
+            Command::Unattached { run, .. } => {
+                (run)(&mut hubris, args, subargs)
+            }
         }
     } else {
         bail!("command {} not found", subargs[0]);
