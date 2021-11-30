@@ -11,12 +11,10 @@ use crate::Args;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::thread;
 use std::time::Instant;
 
 use anyhow::{bail, Result};
 use hif::*;
-use std::time::Duration;
 use structopt::{clap::App, clap::ArgGroup, StructOpt};
 
 use indicatif::{HumanBytes, HumanDuration};
@@ -173,17 +171,8 @@ fn qspi(
 
             info!("erasing {} bytes...", filelen);
 
-            context.execute(core, ops.as_slice(), None)?;
-
-            loop {
-                if context.done(core)? {
-                    break;
-                }
-
-                thread::sleep(Duration::from_millis(100));
-            }
-
-            let results = context.results(core)?;
+            let results =
+                context.execute_blocking(core, ops.as_slice(), None)?;
             let f = qspi_sector_erase;
 
             for (i, block_result) in results.iter().enumerate() {
@@ -259,17 +248,8 @@ fn qspi(
                 Op::Done,
             ];
 
-            context.execute(core, ops.as_slice(), Some(&buf))?;
-
-            loop {
-                if context.done(core)? {
-                    break;
-                }
-
-                thread::sleep(Duration::from_millis(100));
-            }
-
-            let results = context.results(core)?;
+            let results =
+                context.execute_blocking(core, ops.as_slice(), Some(&buf))?;
 
             bar.set_position((offset + len).into());
 
@@ -327,7 +307,7 @@ fn qspi(
 
     ops.push(Op::Done);
 
-    context.execute(
+    let results = context.execute_blocking(
         core,
         ops.as_slice(),
         match data {
@@ -335,16 +315,6 @@ fn qspi(
             _ => None,
         },
     )?;
-
-    loop {
-        if context.done(core)? {
-            break;
-        }
-
-        thread::sleep(Duration::from_millis(100));
-    }
-
-    let results = context.results(core)?;
 
     if subargs.read {
         if let Ok(results) = &results[0] {

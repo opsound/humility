@@ -8,7 +8,6 @@ use crate::hiffy::*;
 use crate::hubris::*;
 use crate::Args;
 use colored::Colorize;
-use std::thread;
 
 use anyhow::{bail, Result};
 use hif::*;
@@ -17,7 +16,6 @@ use pmbus::commands::*;
 use pmbus::*;
 use std::collections::HashMap;
 use std::fmt::Write;
-use std::time::Duration;
 use structopt::clap::App;
 use structopt::StructOpt;
 
@@ -758,17 +756,7 @@ fn summarize(
 
     ops.push(Op::Done);
 
-    context.execute(core, ops.as_slice(), None)?;
-
-    loop {
-        if context.done(core)? {
-            break;
-        }
-
-        thread::sleep(Duration::from_millis(100));
-    }
-
-    let results = context.results(core)?;
+    let results = context.execute_blocking(core, ops.as_slice(), None)?;
     let mut base = 0;
 
     print!("{:13} {:16} {:3} {:4}", "DEVICE", "RAIL", "PG?", "#FLT");
@@ -1111,23 +1099,12 @@ fn writes(
 
     ops.push(Op::Done);
 
-    context.execute(core, ops.as_slice(), None)?;
-
-    loop {
-        if context.done(core)? {
-            break;
-        }
-
-        thread::sleep(Duration::from_millis(100));
-    }
-
     //
     // Now go back through our devices checking results -- and creating our
     // next batch of work, if any.
     //
-    let results = context.results(core)?;
+    let results = context.execute_blocking(core, ops.as_slice(), None)?;
     let mut ndx = 0;
-
     let mut additional = false;
 
     let success = |harg, rail: &Option<u8>, cmd| {
@@ -1268,17 +1245,7 @@ fn writes(
 
     ops.push(Op::Done);
 
-    context.execute(core, ops.as_slice(), None)?;
-
-    loop {
-        if context.done(core)? {
-            break;
-        }
-
-        thread::sleep(Duration::from_millis(100));
-    }
-
-    let results = context.results(core)?;
+    let results = context.execute_blocking(core, ops.as_slice(), None)?;
     let mut ndx = 0;
 
     //
@@ -1591,17 +1558,7 @@ fn pmbus(
 
     ops.push(Op::Done);
 
-    context.execute(core, ops.as_slice(), None)?;
-
-    loop {
-        if context.done(core)? {
-            break;
-        }
-
-        thread::sleep(Duration::from_millis(100));
-    }
-
-    let results = context.results(core)?;
+    let results = context.execute_blocking(core, ops.as_slice(), None)?;
 
     let base = if setrail {
         match results[0] {

@@ -9,8 +9,6 @@ use crate::hubris::*;
 use crate::Args;
 use anyhow::{bail, Result};
 use hif::*;
-use std::thread;
-use std::time::Duration;
 use structopt::clap::App;
 use structopt::StructOpt;
 
@@ -505,17 +503,8 @@ fn i2c(
             ops.push(Op::BranchGreaterThan(Target(0)));
             ops.push(Op::Done);
 
-            context.execute(core, ops.as_slice(), Some(&buf))?;
-
-            loop {
-                if context.done(core)? {
-                    break;
-                }
-
-                thread::sleep(Duration::from_millis(100));
-            }
-
-            let results = context.results(core)?;
+            let results =
+                context.execute_blocking(core, ops.as_slice(), Some(&buf))?;
 
             bar.set_position(offset.into());
 
@@ -635,17 +624,7 @@ fn i2c(
 
     ops.push(Op::Done);
 
-    context.execute(core, ops.as_slice(), None)?;
-
-    loop {
-        if context.done(core)? {
-            break;
-        }
-
-        thread::sleep(Duration::from_millis(100));
-    }
-
-    let results = context.results(core)?;
+    let results = context.execute_blocking(core, ops.as_slice(), None)?;
 
     i2c_done(&subargs, &hargs, &results, func)?;
 
